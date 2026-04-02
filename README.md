@@ -1,3 +1,12 @@
+---
+title: Paperclip
+emoji: 📎
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 <p align="center">
   <img src="doc/assets/header.png" alt="Paperclip — runs your business" width="720" />
 </p>

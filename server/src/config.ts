@@ -77,12 +77,14 @@ export interface Config {
 
 export function loadConfig(): Config {
   const fileConfig = readConfigFile();
-  const fileDatabaseMode =
-    (fileConfig?.database.mode === "postgres" ? "postgres" : "embedded-postgres") as DatabaseMode;
+  const dbModeFromEnv = process.env.PAPERCLIP_DATABASE_MODE;
+  const fileDatabaseMode = (dbModeFromEnv === "postgres" || dbModeFromEnv === "embedded-postgres")
+    ? dbModeFromEnv
+    : (process.env.DATABASE_URL ? "postgres" : (fileConfig?.database.mode === "postgres" ? "postgres" : "embedded-postgres")) as DatabaseMode;
 
   const fileDbUrl =
     fileDatabaseMode === "postgres"
-      ? fileConfig?.database.connectionString
+      ? (process.env.DATABASE_URL ?? fileConfig?.database.connectionString)
       : undefined;
   const fileDatabaseBackup = fileConfig?.database.backup;
   const fileSecrets = fileConfig?.secrets;
@@ -164,8 +166,8 @@ export function loadConfig(): Config {
   const allowedHostnamesFromEnv = allowedHostnamesFromEnvRaw
     ? allowedHostnamesFromEnvRaw
       .split(",")
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => value.length > 0)
+      .map((value: string) => value.trim().toLowerCase())
+      .filter((value: string) => value.length > 0)
     : null;
   const publicUrlHostname = authPublicBaseUrl
     ? (() => {
@@ -182,7 +184,7 @@ export function loadConfig(): Config {
         ...(allowedHostnamesFromEnv ?? fileConfig?.server.allowedHostnames ?? []),
         ...(publicUrlHostname ? [publicUrlHostname] : []),
       ]
-        .map((value) => value.trim().toLowerCase())
+        .map((value: string) => value.trim().toLowerCase())
         .filter(Boolean),
     ),
   );
