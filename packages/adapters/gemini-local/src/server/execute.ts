@@ -224,7 +224,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const resolvedCommand = await resolveCommandForLogs(command, cwd, runtimeEnv);
   const loggedEnv = buildInvocationEnvForLogs(env, {
     runtimeEnv,
-    includeRuntimeKeys: ["HOME"],
+    includeRuntimeKeys: ["HOME", "GEMINI_CONFIG_DIR", "CLAUDE_CONFIG_DIR"],
     resolvedCommand,
   });
 

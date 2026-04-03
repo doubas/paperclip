@@ -3,16 +3,23 @@ set -e
 
 # --- PERSISTENCE LAYER ---
 echo "Provisioning persistent storage on /data..."
-mkdir -p /data/.gemini
 mkdir -p /data/instances/default/workspaces
 mkdir -p /data/instances/default/companies
 mkdir -p /data/storage
 
-# Link .gemini to home for project persistence
-if [ ! -L "/home/node/.gemini" ]; then
-    rm -rf "/home/node/.gemini"
-    ln -s /data/.gemini "/home/node/.gemini"
-fi
+# Ensure config directories are linked to home for project persistence
+for dir in ".gemini" ".claude"; do
+    TARGET="/home/node/$dir"
+    SOURCE="/data/$dir"
+    
+    # Create source if missing
+    mkdir -p "$SOURCE"
+    
+    if [ ! -L "$TARGET" ] || [ "$(readlink "$TARGET")" != "$SOURCE" ]; then
+        rm -rf "$TARGET"
+        ln -s "$SOURCE" "$TARGET"
+    fi
+done
 
 # Link instances to local folder for config persistence if needed
 # (Paperclip often looks in current_dir/instances)
