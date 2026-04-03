@@ -30,7 +30,7 @@ def git_push_to_hf():
         ["git", "remote", "add", "hf", remote_url],
         ["git", "add", "."],
         ["git", "commit", "-m", "🚀 Deploy latest Paperclip bits (Persistence & Sandbox fixes)"],
-        ["git", "push", "hf", "main", "--force"]
+        ["git", "push", "hf", "HEAD:main", "--force"]
     ]
 
     print("📦 Packing delta and pushing...")
