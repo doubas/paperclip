@@ -1,0 +1,35 @@
+# Top level explicit blocks
+node_modules/
+.git/
+.agents/
+.claude/
+.github/
+.vscode/
+dist/
+data/
+.next/
+tmp/
+pnpm-lock.yaml
+
+# Recursive blocks
+**/node_modules/
+**/dist/
+**/data/
+**/.next/
+**/.gemini/
+**/.claude/
+**/tmp*/
+**/report/
+**/*.tsbuildinfo
+**/*.log
+**/*.tmp
+**/.DS_Store
+
+# Hidden tool files
+.env
+.env.local
+.doc-review-cursor
+
+# Test artifacts
+tests/e2e/test-results/
+tests/e2e/playwright-report/
