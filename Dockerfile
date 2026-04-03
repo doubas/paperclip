@@ -12,12 +12,15 @@ RUN apt-get update \
   && apt-get update \
   && apt-get install -y --no-install-recommends gh \
   && rm -rf /var/lib/apt/lists/* \
-  && corepack enable
+  && corepack enable \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Modify the existing node user/group to have the specified UID/GID to match host user
 RUN usermod -u $USER_UID --non-unique node \
   && groupmod -g $USER_GID --non-unique node \
-  && usermod -g $USER_GID -d /paperclip node
+  && usermod -g $USER_GID -d /home/node node \
+  && mkdir -p /data /home/node \
+  && chown -R node:node /data /home/node
 
 FROM base AS deps
 WORKDIR /app
@@ -54,15 +57,19 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 WORKDIR /app
 COPY --chown=node:node --from=build /app /app
-RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai \
+# Configure npm global for non-root and install tools
+RUN mkdir -p /home/node/.npm-global \
+  && npm config set prefix '/home/node/.npm-global' \
+  && npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai @google/gemini-cli \
   && mkdir -p /paperclip \
-  && chown node:node /paperclip
+  && chown -R node:node /home/node/.npm-global /paperclip
 
 COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV NODE_ENV=production \
-  HOME=/data \
+  PATH="/home/node/.npm-global/bin:${PATH}" \
+  HOME=/home/node \
   HOST=0.0.0.0 \
   PORT=7860 \
   SERVE_UI=true \
@@ -74,10 +81,12 @@ ENV NODE_ENV=production \
   PAPERCLIP_DEPLOYMENT_MODE=authenticated \
   PAPERCLIP_DEPLOYMENT_EXPOSURE=public \
   PAPERCLIP_MIGRATION_AUTO_APPLY=true \
-  OPENCODE_ALLOW_ALL_MODELS=true
+  OPENCODE_ALLOW_ALL_MODELS=true \
+  PAPERCLIP_STORAGE_LOCAL_BASE_DIR=/data/storage
 
 VOLUME ["/data"]
 EXPOSE 7860
 
+USER node
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "--import", "./server/node_modules/tsx/dist/loader.mjs", "server/dist/index.js"]

@@ -1,0 +1,24 @@
+
+> @paperclipai/server@0.3.1 build C:\Users\basse\dev\paperclip\server
+> pnpm run preflight:workspace-links && tsc && mkdir -p dist/onboarding-assets && cp -R src/onboarding-assets/. dist/onboarding-assets/
+
+node:internal/modules/cjs/loader:1456
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Users\basse\dev\paperclip\node_modules\pnpm\bin\pnpm.cjs'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1453:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1064:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1069:22)
+    at Module._load (node:internal/modules/cjs/loader:1239:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.0
+C:\Users\basse\dev\paperclip\server:
+ÔÇëERR_PNPM_RECURSIVE_RUN_FIRST_FAILÔÇë @paperclipai/server@0.3.1 build: `pnpm run preflight:workspace-links && tsc && mkdir -p dist/onboarding-assets && cp -R src/onboarding-assets/. dist/onboarding-assets/`
+Exit status 1

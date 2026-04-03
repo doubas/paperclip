@@ -2,9 +2,11 @@ import { createHash, randomBytes } from "node:crypto";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { createDb, instanceUserRoles, invites } from "@paperclipai/db";
+import { createDb, instanceUserRoles, invites, authUsers } from "@paperclipai/db";
 import { loadPaperclipEnvFile } from "../config/env.js";
-import { readConfig, resolveConfigPath } from "../config/store.js";
+import { configExists, readConfig, resolveConfigPath } from "../config/store.js";
+import { createBetterAuthInstance } from "@paperclipai/server/src/auth/better-auth.js";
+import { loadConfig } from "@paperclipai/server/src/config.js";
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -74,25 +76,83 @@ export async function bootstrapCeoInvite(opts: {
     return;
   }
 
-  const db = createDb(dbUrl);
-  const closableDb = db as typeof db & {
-    $client?: {
-      end?: (options?: { timeout?: number }) => Promise<void>;
+    const db = createDb(dbUrl);
+    const closableDb = db as typeof db & {
+      $client?: {
+        end?: (options?: { timeout?: number }) => Promise<void>;
+      };
     };
-  };
-  try {
-    const existingAdminCount = await db
-      .select()
-      .from(instanceUserRoles)
-      .where(eq(instanceUserRoles.role, "instance_admin"))
-      .then((rows) => rows.length);
 
-    if (existingAdminCount > 0 && !opts.force) {
-      p.log.info("Instance already has an admin user. Use --force to generate a new bootstrap invite.");
-      return;
-    }
+    const ceoEmail = process.env.CEO_EMAIL;
+    const ceoPassword = process.env.CEO_PASSWORD;
 
-    const now = new Date();
+    try {
+      const existingAdminCount = await db
+        .select()
+        .from(instanceUserRoles)
+        .where(eq(instanceUserRoles.role, "instance_admin"))
+        .then((rows: any[]) => rows.length);
+
+      if (existingAdminCount > 0 && !opts.force) {
+        if (ceoEmail && ceoPassword) {
+            p.log.info(`CEO account already exists for ${pc.cyan(ceoEmail)}. Skipping auto-bootstrap.`);
+        } else {
+            p.log.info("Instance already has an admin user. Use --force to generate a new bootstrap invite.");
+        }
+        return;
+      }
+
+      // If we have secrets, create the user directly
+      if (ceoEmail && ceoPassword) {
+        p.log.step(`Auto-bootstrapping CEO account for ${pc.cyan(ceoEmail)}...`);
+        // Zero-touch: Only load config if it exists; otherwise use environment fallback
+        let serverConfig: any;
+        if (configExists(opts.config)) {
+            serverConfig = loadConfig();
+        } else {
+            if (!process.env.DATABASE_URL) {
+                p.cancel("No config found and no DATABASE_URL environment variable set.");
+                process.exit(1);
+            }
+            // Minimal config for auth instance fallback
+            serverConfig = {
+                auth: {
+                    secret: process.env.BETTER_AUTH_SECRET || "paperclip-default-secret-change-me",
+                    baseUrl: process.env.BETTER_AUTH_URL || "http://localhost:3100"
+                }
+            };
+        }
+        const auth = createBetterAuthInstance(db, serverConfig);
+        
+        // Better Auth API for registration
+        const result: any = await auth.api.signUpEmail({
+            body: {
+                email: ceoEmail,
+                password: ceoPassword,
+                name: "Administrator",
+            }
+        }).catch((err: Error) => {
+            // If user already exists in auth table but not role table
+            if (err.message?.includes("already exists")) return null;
+            throw err;
+        });
+
+        // Resolve user ID (either from fresh signup or existing record)
+        const user = result?.user ?? await db.select().from(authUsers).where(eq(authUsers.email, ceoEmail)).then((r: any[]) => r[0]);
+        
+        if (!user) throw new Error("Could not find or create user record.");
+
+        // Grant Admin Role
+        await db.insert(instanceUserRoles).values({
+            userId: user.id,
+            role: "instance_admin"
+        }).onConflictDoNothing();
+
+        p.log.success(`CEO account ${pc.green("successfully created")}. You can now log in.`);
+        return;
+      }
+
+      const now = new Date();
     await db
       .update(invites)
       .set({ revokedAt: now, updatedAt: now })

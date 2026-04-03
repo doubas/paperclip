@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.ts text
+*.js text
+*.json text
+*.md text
+*.dockerignore text
+Dockerfile text
